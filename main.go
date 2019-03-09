@@ -29,7 +29,6 @@ func main() {
 	}
 
 	b := board.NewBoard(int32(length), int32(width), mineRate, &input.KeyBoard{})
-	b.DisplayEnd()
 	b.Listen()
 
 	return
