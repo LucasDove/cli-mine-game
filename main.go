@@ -2,6 +2,7 @@ package main
 
 import (
 	"cli-mine-game/board"
+	"cli-mine-game/input"
 	"fmt"
 	"os"
 	"strconv"
@@ -21,7 +22,7 @@ func main() {
 		}
 	}
 
-	b := board.NewBoard(int32(length), int32(width))
+	b := board.NewBoard(int32(length), int32(width), &input.KeyBoard{})
 	b.Listen()
 
 	return

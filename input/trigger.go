@@ -1,7 +1,5 @@
 package input
 
-import "cli-mine-game/board"
-
 type Trigger interface {
-	RecvInput() (board.CellReactor, error)
+	RecvInput() (x, y int32, err error)
 }
