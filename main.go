@@ -10,6 +10,7 @@ import (
 
 func main() {
 	var length, width int64 = 8,8
+	var mineRate float64 = 0.3
 	if len(os.Args) > 2 {
 		var err error
 		length, err = strconv.ParseInt(os.Args[1], 10, 32)
@@ -20,9 +21,15 @@ func main() {
 		if err != nil {
 			fmt.Println("input valid width")
 		}
+		mineRate, err = strconv.ParseFloat(os.Args[3], 10)
+		if err != nil {
+			fmt.Println("input valid mineRate")
+		}
+		mineRate *= 10
 	}
 
-	b := board.NewBoard(int32(length), int32(width), &input.KeyBoard{})
+	b := board.NewBoard(int32(length), int32(width), mineRate, &input.KeyBoard{})
+	b.DisplayEnd()
 	b.Listen()
 
 	return

@@ -37,10 +37,13 @@ func (c *Cell) Toggle(b BoardReactor) bool {
 	if c.isToggled {
 		return true
 	}
-	c.isToggled = true
-	if c.value != Mine {
+
+	defer func() {c.isToggled = true}()
+
+	if c.value == Mine {
 		return false
 	}else if c.value > 0 {
+		b.MinusUntoggledMines()
 		return true
 	}else {
 		c.ToggleSpaces(b)
@@ -53,8 +56,9 @@ func (c *Cell) ToggleSpaces(b BoardReactor) {
 	if c.isToggled {
 		return
 	}
-	if c.value != Mine && c.value > 0 {
+	if c.value == 0 {
 		//whitespaces
+		b.MinusUntoggledMines()
 		c.isToggled = true
 		cells := c.aroundCells(b)
 		for _, cell := range cells {
