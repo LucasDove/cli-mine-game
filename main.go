@@ -8,11 +8,15 @@ import (
 )
 
 func main() {
+
 	err := config.BuildFromStdin()
 	if err != nil {
 		log.Panicf("bad config, err:%+v", err)
 	}
-	b := board.NewBoard(config.Bconfig, &bdio.KeyBoardInput{}, &bdio.TerminalOutput{})
+
+	bdio.InitGui()
+
+	b := board.NewBoard(&bdio.GuiInput{}, &bdio.GuiOutput{})
 	b.Listen()
 
 	return

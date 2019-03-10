@@ -42,11 +42,11 @@ type Board struct {
 	outputter bdio.OutputReceiver
 }
 
-func NewBoard(bconfig *config.BoardConfig, inputer bdio.InputReceiver, outputter bdio.OutputReceiver) *Board {
+func NewBoard(inputer bdio.InputReceiver, outputter bdio.OutputReceiver) *Board {
 	b := &Board{
-		length:    bconfig.Length,
-		height:    bconfig.Height,
-		mines:     bconfig.Mines,
+		length:    config.Bconfig.Length,
+		height:    config.Bconfig.Height,
+		mines:     config.Bconfig.Mines,
 		inputer:   inputer,
 		outputter: outputter,
 	}
@@ -133,7 +133,7 @@ func (b *Board) Listen() {
 	for ; !b.GameEnded(); {
 		x, y, err := b.inputer.Input()
 		if err != nil {
-			continue
+			break
 		}
 		if config.IsValidCell(x, y) {
 			if ! b.GetCell(x, y).Toggle(b) {
