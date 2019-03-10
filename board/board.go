@@ -51,7 +51,7 @@ func NewBoard(inputer bdio.InputReceiver, outputter bdio.OutputReceiver) *Board 
 		outputter: outputter,
 	}
 	b.build()
-	b.DisplayEnd()
+	b.displayStart()
 	return b
 }
 
@@ -187,6 +187,19 @@ func (b *Board) DisplayEnd() {
 			}else {
 				row = append(row, cell.GetValue())
 			}
+		}
+		bvalue = append(bvalue, row)
+	}
+	b.outputter.Output(bvalue, 0, 0)
+}
+
+func (b *Board) displayStart() {
+	var bvalue [][]int8
+
+	for i := int32(0); i < b.height; i++ {
+		var row []int8
+		for j := int32(0); j < b.length ; j++ {
+			row = append(row, config.DispUndigged)
 		}
 		bvalue = append(bvalue, row)
 	}

@@ -14,9 +14,11 @@ func main() {
 		log.Panicf("bad config, err:%+v", err)
 	}
 
-	bdio.InitGui()
+	//bdio.InitGui()
+	//b := board.NewBoard(&bdio.GuiInput{}, &bdio.GuiOutput{})
 
-	b := board.NewBoard(&bdio.GuiInput{}, &bdio.GuiOutput{})
+	b := board.NewBoard(&bdio.KeyBoardInput{}, &bdio.TerminalOutput{})
+	b.DisplayEnd()
 	b.Listen()
 
 	return

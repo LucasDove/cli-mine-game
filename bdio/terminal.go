@@ -14,7 +14,7 @@ func (t *TerminalOutput) Output(bvalue [][]int8, x, y int32) {
 		row := ""
 		for j := 0; j < len(bvalue[i]) ; j++ {
 			cell := bvalue[i][j]
-			if cell == config.DispMine || cell == config.DispSpace {
+			if cell == config.DispMine || cell == config.DispSpace || cell == config.DispUndigged {
 				row += fmt.Sprintf("%c  ", cell)
 			}else {
 				row += fmt.Sprintf("%d  ", cell)

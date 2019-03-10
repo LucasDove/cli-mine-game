@@ -15,6 +15,7 @@ var (
 func InitGui() {
 	var err error
 	Gui, err = gocui.NewGui(gocui.Output256)
+	Gui.ASCII = false
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -32,17 +33,15 @@ func InitGui() {
 }
 
 func layout(g *gocui.Gui) error {
-	_, maxY := g.Size()
 	for i := 0; i < int(config.Bconfig.Height); i++ {
-		var cellWidth int = maxY / int(config.Bconfig.Height)
+		var cellHeight int = 2
+		var cellLength int = 4
 		for j := 0; j < int(config.Bconfig.Length); j++ {
 			name := fmt.Sprintf("cell%d%d", i, j)
-			v, err := g.SetView(name, j * cellWidth, i * cellWidth, (j+1) * cellWidth, (i) * cellWidth + 3)
+			_, err := g.SetView(name, j * cellLength, i * cellHeight, (j+1) * cellLength, (i+1) * cellHeight)
 			if err != nil && err != gocui.ErrUnknownView {
 				return err
 			}
-			x, y := v.Size()
-			_, _ = fmt.Fprintf(v, "%d, %d", x, y)
 		}
 	}
 
@@ -58,11 +57,28 @@ type GuiOutput struct {
 }
 
 func (g *GuiOutput) Output(bvalue [][]int8, x, y int32) {
-	view, err := Gui.View("cell00")
-	if err == nil {
-		var buf []byte
-		buf = append(buf, byte(bvalue[0][0]))
-		_, _ = view.Write(buf)
+	log.Println("runs here....")
+	for i := 0; i < int(config.Bconfig.Height); i++ {
+		for j := 0; j < int(config.Bconfig.Length); j++ {
+			cell := bvalue[i][j]
+			name := fmt.Sprintf("cell%d%d", i, j)
+			v, err := Gui.View(name)
+			if err != nil && err != gocui.ErrUnknownView {
+				log.Panicf("wrong cell name:%s", name)
+			}
+			//v.Clear()
+			var value string
+			if cell == config.DispMine || cell == config.DispSpace || cell == config.DispUndigged {
+				value = fmt.Sprintf("%c", cell)
+			}else {
+				value = fmt.Sprintf("%d", cell)
+			}
+			fmt.Printf("fill %s with value: %s\n", name, value)
+			_, err = fmt.Fprint(v, []byte(value))
+			if err != nil {
+				fmt.Printf("fill err:%+v\n", err)
+			}
+		}
 	}
 }
 

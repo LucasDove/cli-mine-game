@@ -4,7 +4,7 @@ import "cli-mine-game/config"
 
 type CellReactor interface {
 	Toggle(b BoardReactor) bool
-	ToggleSpaces(b BoardReactor)
+	SweepArea(b BoardReactor)
 
 	GetValue() int8
 	SetValue(value int8)
@@ -41,7 +41,7 @@ func (c *Cell) Toggle(b BoardReactor) bool {
 	if c.value == config.Mine {
 		return false
 	}else if c.value == config.Space {
-		c.ToggleSpaces(b)
+		c.SweepArea(b)
 	}else {
 		b.MinusUntoggledMines()
 		return true
@@ -50,7 +50,8 @@ func (c *Cell) Toggle(b BoardReactor) bool {
 	return true
 }
 
-func (c *Cell) ToggleSpaces(b BoardReactor) {
+//保证调用处的cell一定是space
+func (c *Cell) SweepArea(b BoardReactor) {
 	if c.isToggled {
 		return
 	}
@@ -60,8 +61,14 @@ func (c *Cell) ToggleSpaces(b BoardReactor) {
 		c.isToggled = true
 		cells := c.aroundCells(b)
 		for _, cell := range cells {
-			cell.ToggleSpaces(b)
+			cell.SweepArea(b)
 		}
+	}else if c.value != config.Mine {
+		b.MinusUntoggledMines()
+		c.isToggled = true
+	}else {
+		//mines
+		return
 	}
 }
 
@@ -70,9 +77,23 @@ func (c *Cell) aroundCells(b BoardReactor) []CellReactor {
 	if config.IsValidCell(c.x+1, c.y) {
 		arrounds = append(arrounds, b.GetCell(c.x+1, c.y))
 	}
+	if config.IsValidCell(c.x+1, c.y+1) {
+		arrounds = append(arrounds, b.GetCell(c.x+1, c.y+1))
+	}
+	if config.IsValidCell(c.x+1, c.y-1) {
+		arrounds = append(arrounds, b.GetCell(c.x+1, c.y-1))
+	}
+
 	if config.IsValidCell(c.x-1, c.y) {
 		arrounds = append(arrounds, b.GetCell(c.x-1, c.y))
 	}
+	if config.IsValidCell(c.x-1, c.y+1) {
+		arrounds = append(arrounds, b.GetCell(c.x-1, c.y+1))
+	}
+	if config.IsValidCell(c.x-1, c.y-1) {
+		arrounds = append(arrounds, b.GetCell(c.x-1, c.y-1))
+	}
+
 	if config.IsValidCell(c.x, c.y+1) {
 		arrounds = append(arrounds, b.GetCell(c.x, c.y+1))
 	}
