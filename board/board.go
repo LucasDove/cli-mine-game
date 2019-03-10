@@ -1,7 +1,8 @@
 package board
 
 import (
-	"cli-mine-game/input"
+	"cli-mine-game/bdio"
+	"cli-mine-game/config"
 	"fmt"
 	"math/rand"
 	"time"
@@ -12,7 +13,6 @@ func init() {
 }
 
 type BoardReactor interface {
-	IsValidCell(x, y int32) bool
 	MinusUntoggledMines()
 	GetCell(x, y int32) CellReactor
 	GameEnded() bool
@@ -23,54 +23,62 @@ type BoardReactor interface {
 }
 
 type Board struct {
-	length int32
-	height int32
+	//长度
+	length          int32
+	//高度
+	height          int32
+	//格子对象
+	cells           [][]CellReactor
+	//未翻开的好格子，空白和数字
+	unToggledSpaces int32
+	//地雷的数量
+	mines           int32
+	//是否踩中了地雷
+	steppedOnMine   bool
 
-	mineRate       float64
-	cells          [][]CellReactor
-	unToggledMines int32
-	mineNum        int32
-	steppedOnMine  bool
-
-	inputer input.Trigger
+	//输入器
+	inputer   bdio.InputReceiver
+	//输出器
+	outputter bdio.OutputReceiver
 }
 
-func NewBoard(l, w int32, mineRate float64, inputer input.Trigger) *Board {
+func NewBoard(bconfig *config.BoardConfig, inputer bdio.InputReceiver, outputter bdio.OutputReceiver) *Board {
 	b := &Board{
-		length: l,
-		height: w,
-		mineRate: mineRate,
-		inputer: inputer,
+		length:    bconfig.Length,
+		height:    bconfig.Height,
+		mines:     bconfig.Mines,
+		inputer:   inputer,
+		outputter: outputter,
 	}
 	b.build()
+	b.DisplayEnd()
 	return b
 }
 
 func (b *Board) build() {
+	b.unToggledSpaces = b.length*b.height - b.mines
+
 	for i := int32(0); i < b.height; i++ {
 		var row []CellReactor
 		for j := int32(0); j < b.length ; j++ {
 			cell := &Cell{
 				x: i,
 				y: j,
-				value: 0,
+				value: config.Space,
 				isToggled: false,
 			}
 			row = append(row, cell)
 		}
 		b.cells = append(b.cells, row)
 	}
-	total := b.length * b.height
-	b.mineNum = total * int32(b.mineRate) / 10
-	b.unToggledMines = total - b.mineNum
 
 	fillsMap := make(map[string]bool)
-	for ; int32(len(fillsMap)) < b.mineNum; {
+	for ; int32(len(fillsMap)) < b.mines; {
 		y := rand.Int31n(b.length)
 		x := rand.Int31n(b.height)
 		key := fmt.Sprintf("%d+%d", x, y)
 		if _, ok := fillsMap[key]; !ok {
-			b.cells[x][y].SetValue(Mine)
+			b.cells[x][y].SetValue(config.Mine)
 			fillsMap[key] = true
 		}
 	}
@@ -78,32 +86,32 @@ func (b *Board) build() {
 	for i := int32(0); i < b.height; i++ {
 		for j := int32(0); j < b.length ; j++ {
 			cell := b.cells[i][j]
-			if cell.GetValue() != Mine {
+			if cell.GetValue() != config.Mine {
 				mines := int8(0)
-				if j + 1 < b.length && b.cells[i][j+1].GetValue() == Mine {
+				if j + 1 < b.length && b.cells[i][j+1].GetValue() == config.Mine {
 					mines++
 				}
-				if j - 1 >= 0 && b.cells[i][j-1].GetValue() == Mine {
+				if j - 1 >= 0 && b.cells[i][j-1].GetValue() == config.Mine {
 					mines++
 				}
-				if i + 1 < b.height && b.cells[i+1][j].GetValue() == Mine {
+				if i + 1 < b.height && b.cells[i+1][j].GetValue() == config.Mine {
 					mines++
 				}
-				if i - 1 >= 0 && b.cells[i-1][j].GetValue() == Mine {
+				if i - 1 >= 0 && b.cells[i-1][j].GetValue() == config.Mine {
 					mines++
 				}
 
 
-				if j + 1 < b.length && i + 1 < b.height && b.cells[i+1][j+1].GetValue() == Mine {
+				if j + 1 < b.length && i + 1 < b.height && b.cells[i+1][j+1].GetValue() == config.Mine {
 					mines++
 				}
-				if j - 1 >= 0 && i + 1 < b.height && b.cells[i+1][j-1].GetValue() == Mine {
+				if j - 1 >= 0 && i + 1 < b.height && b.cells[i+1][j-1].GetValue() == config.Mine {
 					mines++
 				}
-				if j + 1 < b.length && i - 1 >= 0 && b.cells[i-1][j+1].GetValue() == Mine {
+				if j + 1 < b.length && i - 1 >= 0 && b.cells[i-1][j+1].GetValue() == config.Mine {
 					mines++
 				}
-				if j - 1 >= 0 && i - 1 >= 0 && b.cells[i-1][j-1].GetValue() == Mine {
+				if j - 1 >= 0 && i - 1 >= 0 && b.cells[i-1][j-1].GetValue() == config.Mine {
 					mines++
 				}
 
@@ -113,12 +121,8 @@ func (b *Board) build() {
 	}
 }
 
-func (b *Board) IsValidCell(x, y int32) bool {
-	return y < b.length && x < b.height && y >= 0 && x >= 0
-}
-
 func (b *Board) MinusUntoggledMines() {
-	b.unToggledMines--
+	b.unToggledSpaces--
 }
 
 func (b *Board) GetCell(x, y int32) CellReactor {
@@ -127,11 +131,11 @@ func (b *Board) GetCell(x, y int32) CellReactor {
 
 func (b *Board) Listen() {
 	for ; !b.GameEnded(); {
-		x, y, err := b.inputer.RecvInput()
+		x, y, err := b.inputer.Input()
 		if err != nil {
 			continue
 		}
-		if b.IsValidCell(x, y) {
+		if config.IsValidCell(x, y) {
 			if ! b.GetCell(x, y).Toggle(b) {
 				b.SetGameEnd()
 			}else {
@@ -145,47 +149,54 @@ func (b *Board) Listen() {
 }
 
 func (b *Board) DisplayPending() {
+	var bvalue [][]int8
+
 	for i := int32(0); i < b.height; i++ {
-		row := ""
+		var row []int8
 		for j := int32(0); j < b.length ; j++ {
 			cell := b.cells[i][j]
 			if cell.IsToggled() {
-				if cell.GetValue() == Mine {
-					row += "#  "
-				}else if cell.GetValue() == 0 {
-					row += "_  "
+				if cell.GetValue() == config.Mine {
+					row = append(row, config.DispMine)
+				}else if cell.GetValue() == config.Space {
+					row = append(row, config.DispSpace)
 				}else {
-					row += fmt.Sprintf("%d  ", cell.GetValue())
+					row = append(row, cell.GetValue())
 				}
 			}else {
-				row += "*  "
+				row = append(row, config.DispUndigged)
 			}
 		}
-		fmt.Println(row)
+		bvalue = append(bvalue, row)
 	}
+
+	b.outputter.Output(bvalue, 0, 0)
 }
 
 func (b *Board) DisplayEnd() {
+	var bvalue [][]int8
+
 	for i := int32(0); i < b.height; i++ {
-		row := ""
+		var row []int8
 		for j := int32(0); j < b.length ; j++ {
 			cell := b.cells[i][j]
-			if cell.GetValue() == Mine {
-				row += "#  "
-			}else if cell.GetValue() == 0 {
-				row += "_  "
+			if cell.GetValue() == config.Mine {
+				row = append(row, config.DispMine)
+			}else if cell.GetValue() == config.Space {
+				row = append(row, config.DispSpace)
 			}else {
-				row += fmt.Sprintf("%d  ", cell.GetValue())
+				row = append(row, cell.GetValue())
 			}
 		}
-		fmt.Println(row)
+		bvalue = append(bvalue, row)
 	}
+	b.outputter.Output(bvalue, 0, 0)
 }
 
 func (b *Board) GameEnded() bool {
-	end := b.steppedOnMine || b.unToggledMines == 0
+	end := b.steppedOnMine || b.unToggledSpaces == 0
 	if end {
-		if b.unToggledMines == 0 {
+		if b.unToggledSpaces == 0 {
 			fmt.Println("grats, you have solve it")
 		}else {
 			fmt.Println("sorry, you have stepped on the mine")

@@ -1,8 +1,6 @@
 package board
 
-const (
-	Mine = int8(100)
-)
+import "cli-mine-game/config"
 
 type CellReactor interface {
 	Toggle(b BoardReactor) bool
@@ -40,13 +38,13 @@ func (c *Cell) Toggle(b BoardReactor) bool {
 
 	defer func() {c.isToggled = true}()
 
-	if c.value == Mine {
+	if c.value == config.Mine {
 		return false
-	}else if c.value > 0 {
+	}else if c.value == config.Space {
+		c.ToggleSpaces(b)
+	}else {
 		b.MinusUntoggledMines()
 		return true
-	}else {
-		c.ToggleSpaces(b)
 	}
 
 	return true
@@ -56,7 +54,7 @@ func (c *Cell) ToggleSpaces(b BoardReactor) {
 	if c.isToggled {
 		return
 	}
-	if c.value == 0 {
+	if c.value == config.Space {
 		//whitespaces
 		b.MinusUntoggledMines()
 		c.isToggled = true
@@ -69,16 +67,16 @@ func (c *Cell) ToggleSpaces(b BoardReactor) {
 
 func (c *Cell) aroundCells(b BoardReactor) []CellReactor {
 	var arrounds []CellReactor
-	if b.IsValidCell(c.x+1, c.y) {
+	if config.IsValidCell(c.x+1, c.y) {
 		arrounds = append(arrounds, b.GetCell(c.x+1, c.y))
 	}
-	if b.IsValidCell(c.x-1, c.y) {
+	if config.IsValidCell(c.x-1, c.y) {
 		arrounds = append(arrounds, b.GetCell(c.x-1, c.y))
 	}
-	if b.IsValidCell(c.x, c.y+1) {
+	if config.IsValidCell(c.x, c.y+1) {
 		arrounds = append(arrounds, b.GetCell(c.x, c.y+1))
 	}
-	if b.IsValidCell(c.x, c.y-1) {
+	if config.IsValidCell(c.x, c.y-1) {
 		arrounds = append(arrounds, b.GetCell(c.x, c.y-1))
 	}
 	return arrounds

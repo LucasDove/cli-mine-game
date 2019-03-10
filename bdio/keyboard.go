@@ -1,4 +1,4 @@
-package input
+package bdio
 
 import (
 	"errors"
@@ -6,19 +6,15 @@ import (
 	"strconv"
 )
 
-type Trigger interface {
-	RecvInput() (x, y int32, err error)
+type KeyBoardInput struct {
 }
 
-type KeyBoard struct {
-}
-
-func (k *KeyBoard) RecvInput() (x, y int32, err error) {
-	fmt.Println("take a guess, input coordinate:")
+func (k *KeyBoardInput) Input() (x, y int32, err error) {
+	fmt.Println("take a guess, bdio coordinate:")
 	var lenth, height string
 	cnt, cerr := fmt.Scanln(&height, &lenth)
 	if cerr != nil || cnt < 2 {
-		return 0, 0, errors.New("input error, retry again")
+		return 0, 0, errors.New("bdio error, retry again")
 	}
 
 	l, cerr := strconv.ParseInt(lenth, 10, 32)
