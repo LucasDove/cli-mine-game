@@ -1,7 +1,6 @@
 package board
 
 import (
-	"cli-mine-game/bdio"
 	"cli-mine-game/config"
 	"fmt"
 	"math/rand"
@@ -16,10 +15,10 @@ type BoardReactor interface {
 	MinusUntoggledMines()
 	GetCell(x, y int32) CellReactor
 	GameEnded() bool
+	ProblemSolved() bool
 	SetGameEnd()
-	Listen()
-	DisplayPending()
-	DisplayEnd()
+	DisplayPending() [][]int8
+	DisplayEnd() [][]int8
 }
 
 type Board struct {
@@ -35,23 +34,15 @@ type Board struct {
 	mines           int32
 	//是否踩中了地雷
 	steppedOnMine   bool
-
-	//输入器
-	inputer   bdio.InputReceiver
-	//输出器
-	outputter bdio.OutputReceiver
 }
 
-func NewBoard(inputer bdio.InputReceiver, outputter bdio.OutputReceiver) *Board {
+func NewBoard() *Board {
 	b := &Board{
 		length:    config.Bconfig.Length,
 		height:    config.Bconfig.Height,
 		mines:     config.Bconfig.Mines,
-		inputer:   inputer,
-		outputter: outputter,
 	}
 	b.build()
-	b.displayStart()
 	return b
 }
 
@@ -129,7 +120,7 @@ func (b *Board) GetCell(x, y int32) CellReactor {
 	return b.cells[x][y]
 }
 
-func (b *Board) Listen() {
+/*func (b *Board) Listen() {
 	for ; !b.GameEnded(); {
 		x, y, err := b.inputer.Input()
 		if err != nil {
@@ -146,9 +137,9 @@ func (b *Board) Listen() {
 		}
 	}
 	b.DisplayEnd()
-}
+}*/
 
-func (b *Board) DisplayPending() {
+func (b *Board) DisplayPending() [][]int8 {
 	var bvalue [][]int8
 
 	for i := int32(0); i < b.height; i++ {
@@ -170,10 +161,10 @@ func (b *Board) DisplayPending() {
 		bvalue = append(bvalue, row)
 	}
 
-	b.outputter.Output(bvalue, 0, 0)
+	return bvalue
 }
 
-func (b *Board) DisplayEnd() {
+func (b *Board) DisplayEnd() [][]int8 {
 	var bvalue [][]int8
 
 	for i := int32(0); i < b.height; i++ {
@@ -190,34 +181,17 @@ func (b *Board) DisplayEnd() {
 		}
 		bvalue = append(bvalue, row)
 	}
-	b.outputter.Output(bvalue, 0, 0)
-}
-
-func (b *Board) displayStart() {
-	var bvalue [][]int8
-
-	for i := int32(0); i < b.height; i++ {
-		var row []int8
-		for j := int32(0); j < b.length ; j++ {
-			row = append(row, config.DispUndigged)
-		}
-		bvalue = append(bvalue, row)
-	}
-	b.outputter.Output(bvalue, 0, 0)
+	return bvalue
 }
 
 func (b *Board) GameEnded() bool {
-	end := b.steppedOnMine || b.unToggledSpaces == 0
-	if end {
-		if b.unToggledSpaces == 0 {
-			fmt.Println("grats, you have solve it")
-		}else {
-			fmt.Println("sorry, you have stepped on the mine")
-		}
-	}
-	return end
+	return b.steppedOnMine || b.unToggledSpaces == 0
 }
 
 func (b *Board) SetGameEnd() {
 	b.steppedOnMine = true
+}
+
+func (b *Board) ProblemSolved() bool {
+	return b.unToggledSpaces == 0
 }

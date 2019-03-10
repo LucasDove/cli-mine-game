@@ -1,18 +1,22 @@
 package bdio
 
 import (
+	"cli-mine-game/board"
 	"cli-mine-game/config"
 	"errors"
 	"fmt"
 	"github.com/jroimartin/gocui"
 	"log"
+	"time"
 )
 
 var (
 	Gui *gocui.Gui
+	bboard board.BoardReactor
+	output = &GuiOutput{}
 )
 
-func InitGui() {
+func InitGui(b board.BoardReactor) {
 	var err error
 	Gui, err = gocui.NewGui(gocui.Output256)
 	Gui.ASCII = false
@@ -20,6 +24,10 @@ func InitGui() {
 		log.Panicln(err)
 	}
 	defer Gui.Close()
+
+	Gui.Cursor = true
+	Gui.Mouse = true
+	bboard = b
 
 	Gui.SetManagerFunc(layout)
 
@@ -30,6 +38,22 @@ func InitGui() {
 	if err := Gui.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
+	time.Sleep(time.Second * 2)
+}
+
+func getNameFromCoordinate(x, y int) string {
+	return fmt.Sprintf("cell %d %d", x, y)
+}
+
+func extCoordinateFromName(name string) (x, y int32) {
+	var prefix string
+	var xzb int32
+	var yzb int32
+	_, err := fmt.Sscanf(name, "%s %d %d", &prefix, &xzb, &yzb)
+	if err != nil {
+		log.Panicf("%s onclick, err:%+v", name, err)
+	}
+	return xzb, yzb
 }
 
 func layout(g *gocui.Gui) error {
@@ -37,12 +61,42 @@ func layout(g *gocui.Gui) error {
 		var cellHeight int = 2
 		var cellLength int = 4
 		for j := 0; j < int(config.Bconfig.Length); j++ {
-			name := fmt.Sprintf("cell%d%d", i, j)
-			_, err := g.SetView(name, j * cellLength, i * cellHeight, (j+1) * cellLength, (i+1) * cellHeight)
+			name := getNameFromCoordinate(i, j)
+			v, err := g.SetView(name, j * cellLength, i * cellHeight, (j+1) * cellLength, (i+1) * cellHeight)
 			if err != nil && err != gocui.ErrUnknownView {
 				return err
 			}
+			_, err = fmt.Fprintln(v, " *")
+			if err != nil {
+				fmt.Printf("fill err:%+v\n", err)
+			}
+
+			if err := Gui.SetKeybinding(v.Name(), gocui.MouseLeft, gocui.ModNone, onclick); err != nil {
+				log.Panicln(err)
+			}
 		}
+	}
+
+	return nil
+}
+
+func onclick(g *gocui.Gui, v *gocui.View) error {
+	if bboard.GameEnded() {
+		return gocui.ErrQuit
+	}
+
+	if _, err := g.SetCurrentView(v.Name()); err != nil {
+		return err
+	}
+
+	xzb, yzb := extCoordinateFromName(v.Name())
+
+	cell := bboard.GetCell(xzb, yzb)
+	if cell.Toggle(bboard) {
+		output.Output(bboard.DisplayPending())
+	}else {
+		bboard.SetGameEnd()
+		output.Output(bboard.DisplayEnd())
 	}
 
 	return nil
@@ -56,25 +110,24 @@ type GuiOutput struct {
 
 }
 
-func (g *GuiOutput) Output(bvalue [][]int8, x, y int32) {
-	log.Println("runs here....")
+func (g *GuiOutput) Output(bvalue [][]int8) {
 	for i := 0; i < int(config.Bconfig.Height); i++ {
 		for j := 0; j < int(config.Bconfig.Length); j++ {
 			cell := bvalue[i][j]
-			name := fmt.Sprintf("cell%d%d", i, j)
+			name := getNameFromCoordinate(i, j)
 			v, err := Gui.View(name)
 			if err != nil && err != gocui.ErrUnknownView {
 				log.Panicf("wrong cell name:%s", name)
 			}
-			//v.Clear()
-			var value string
+			v.Clear()
 			if cell == config.DispMine || cell == config.DispSpace || cell == config.DispUndigged {
-				value = fmt.Sprintf("%c", cell)
+				_, err = fmt.Fprintf(v, " %c", cell)
+				if cell == config.DispMine {
+					v.SelBgColor = gocui.ColorGreen
+				}
 			}else {
-				value = fmt.Sprintf("%d", cell)
+				_, err = fmt.Fprintf(v, " %d", cell)
 			}
-			fmt.Printf("fill %s with value: %s\n", name, value)
-			_, err = fmt.Fprint(v, []byte(value))
 			if err != nil {
 				fmt.Printf("fill err:%+v\n", err)
 			}

@@ -9,7 +9,7 @@ type TerminalOutput struct {
 
 }
 
-func (t *TerminalOutput) Output(bvalue [][]int8, x, y int32) {
+func (t *TerminalOutput) Output(bvalue [][]int8) {
 	for i := 0; i < len(bvalue); i++ {
 		row := ""
 		for j := 0; j < len(bvalue[i]) ; j++ {

@@ -5,5 +5,5 @@ type InputReceiver interface {
 }
 
 type OutputReceiver interface {
-	Output(bvalue [][]int8, x, y int32)
+	Output(bvalue [][]int8)
 }
