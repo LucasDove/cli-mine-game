@@ -7,19 +7,19 @@ import (
 	"fmt"
 	"github.com/jroimartin/gocui"
 	"log"
-	"time"
 )
 
 var (
 	Gui *gocui.Gui
 	bboard board.BoardReactor
 	output = &GuiOutput{}
+
+	exitCountDown = 1
 )
 
 func InitGui(b board.BoardReactor) {
 	var err error
 	Gui, err = gocui.NewGui(gocui.Output256)
-	Gui.ASCII = false
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -38,7 +38,6 @@ func InitGui(b board.BoardReactor) {
 	if err := Gui.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
-	time.Sleep(time.Second * 2)
 }
 
 func getNameFromCoordinate(x, y int) string {
@@ -66,7 +65,7 @@ func layout(g *gocui.Gui) error {
 			if err != nil && err != gocui.ErrUnknownView {
 				return err
 			}
-			_, err = fmt.Fprintln(v, " *")
+			_, err = fmt.Fprintln(v, " ")
 			if err != nil {
 				fmt.Printf("fill err:%+v\n", err)
 			}
@@ -81,16 +80,14 @@ func layout(g *gocui.Gui) error {
 }
 
 func onclick(g *gocui.Gui, v *gocui.View) error {
-	if bboard.GameEnded() {
-		return gocui.ErrQuit
-	}
-
 	if _, err := g.SetCurrentView(v.Name()); err != nil {
 		return err
 	}
-
 	xzb, yzb := extCoordinateFromName(v.Name())
 
+	if bboard.GameEnded() {
+		return quit(g, v)
+	}
 	cell := bboard.GetCell(xzb, yzb)
 	if cell.Toggle(bboard) {
 		output.Output(bboard.DisplayPending())
@@ -103,7 +100,31 @@ func onclick(g *gocui.Gui, v *gocui.View) error {
 }
 
 func quit(g *gocui.Gui, v *gocui.View) error {
-	return gocui.ErrQuit
+	if exitCountDown == 0 {
+		return gocui.ErrQuit
+	}
+	exitCountDown--
+
+	maxX, maxY := g.Size()
+	v, err := g.SetView("script", -1, maxY - 10, maxX, maxY)
+	if err != nil && err != gocui.ErrUnknownView {
+		return err
+	}
+
+	text := ""
+	if bboard.ProblemSolved() {
+		text = "congrats, you solved the problem"
+	}else {
+		text = "sorry, you stepped on the mine"
+	}
+	text += ". exit in next time"
+
+	_, err = fmt.Fprintln(v, text)
+	if err != nil {
+		fmt.Printf("fill err:%+v\n", err)
+	}
+
+	return nil
 }
 
 type GuiOutput struct {

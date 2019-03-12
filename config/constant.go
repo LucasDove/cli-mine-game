@@ -5,6 +5,6 @@ const (
 	Space = int8(0)
 
 	DispMine     = int8('#')
-	DispSpace    = int8(' ')
-	DispUndigged = int8('*')
+	DispSpace    = int8('_')
+	DispUndigged = int8(' ')
 )
